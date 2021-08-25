@@ -30,10 +30,16 @@ class Log {
     }
 
     public static function error($name, $message) {
+        if(empty(self::$instance[$name])){
+            die($message);
+        }
         self::$instance[$name]->error($message, self::$context);
     }
     
     public static function info($name, $message) {
+        if(empty(self::$instance[$name])){
+            die($message);
+        }
         self::$instance[$name]->info($message, self::$context);
     }
 
