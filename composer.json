@@ -1,5 +1,5 @@
 {
-    "name": "Memcrab/Log",
+    "name": "memcrab/log",
     "description": "Additional static layer for monolog lib",
     "keywords": ["log", "php", "monolog"],
     "homepage": "http://memcrab.com",
