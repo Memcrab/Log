@@ -1,5 +1,5 @@
 <?php declare (strict_types = 1);
-namespace memCrab\Log;
+namespace Memcrab\Log;
 
 use Aws\Sqs\SqsClient;
 use Monolog\Formatter\JsonFormatter;
