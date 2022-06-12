@@ -1,65 +1,47 @@
 <?php declare (strict_types = 1);
 namespace Memcrab\Log;
 
-use Aws\Sqs\SqsClient;
-use Monolog\Formatter\JsonFormatter;
-use Monolog\Handler\AmqpHandler;
-use Monolog\Handler\RotatingFileHandler;
-use Monolog\Handler\SqsHandler;
 use Monolog\Logger;
-use PhpAmqpLib\Channel\AMQPChannel;
 
 /**
  *  Log for core project
  *
  *  @author Oleksandr Diudiun
  */
-class Log {
+class Log extends Logger {
 
-    private static $instance;
+    // https://github.com/Seldaek/monolog/blob/main/src/Monolog/Registry.php
+
+    // особенно callStatic
+
     private static $context = [];
-
-    function __construct() {}
-
-    public static function stream($name) {
-        if (!isset(self::$instance[$name])) {
-            self::$instance[$name] = new Logger($name);
-        }
-
-        return self::$instance[$name];
-    }
-
-    public static function error($name, $message) {
-        if(empty(self::$instance[$name])){
-            die($message);
-        }
-        self::$instance[$name]->error($message, self::$context);
-    }
     
-    public static function info($name, $message) {
-        if(empty(self::$instance[$name])){
-            die($message);
+    public static function registerShutdownFunction(array $additionalShutdownFunctions = []):void {
+        foreach($additionalShutdownFunctions as $function) {
+            register_shutdown_function($function);
         }
-        self::$instance[$name]->info($message, self::$context);
+        register_shutdown_function("Log::shutdown");
+        
+        pcntl_signal(SIGTERM, function($signo) {
+            Log::shutdown($signo);
+        });
     }
 
-    public static function setContext(array $context) {
+    public static function shutdown($signo = null):void {
+        $error = "Server stopped: " . ($signo ?? json_encode(error_get_last()));
+        error_log($error);
+        exit($error);
+    }
+
+    public function error($message) {
+        self::error($message, self::$context);
+    }
+
+    public function warning($message) {
+        self::warning($message, self::$context);
+    }
+
+    public static function setContext(array $context):void {
         self::$context = $context;
-    }
-
-    public static function setDefaultRotationHandler($name) {
-        self::stream($name)->pushHandler(new RotatingFileHandler('logs/' . $name . '/' . $name . '.log'));
-    }
-
-    public static function setSqsHandler(SqsClient $sqsClient, $queueUrl, $name) {
-        $stream = new SqsHandler($sqsClient, $queueUrl);
-        $stream->setFormatter(new JsonFormatter());
-        self::stream($name)->pushHandler($stream);
-    }
-
-    public static function setAmqpHandler(AMQPChannel $channel, $exchangeName, $name) {
-        $stream = new AmqpHandler($channel, $exchangeName);
-        $stream->setFormatter(new JsonFormatter());
-        self::stream($name)->pushHandler($stream);
     }
 }
