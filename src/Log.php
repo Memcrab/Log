@@ -3,45 +3,61 @@ namespace Memcrab\Log;
 
 use Monolog\Logger;
 
-/**
- *  Log for core project
- *
- *  @author Oleksandr Diudiun
- */
-class Log extends Logger {
+class Log extends Logger{
 
-    // https://github.com/Seldaek/monolog/blob/main/src/Monolog/Registry.php
+    private static array $context = [];
+    private static Log $instance;
 
-    // особенно callStatic
-
-    private static $context = [];
+    public static function obj(): self
+    {
+        if (!isset(self::$instance ) || !(self::$instance instanceof Log)){
+            self::$instance = new self('log');  
+        }
+        return self::$instance;
+    }
     
+    public static function shutdown($signo = null):void {
+        $error = "Server shuted down. " . $signo . " <" . json_encode(error_get_last()) . ">";
+        self::$instance->error($error);
+    }
+   
+    public static function contextProcessor($record)
+    {
+        $record['extra'] = self::$context;
+        return $record;
+    }
+
     public static function registerShutdownFunction(array $additionalShutdownFunctions = []):void {
         foreach($additionalShutdownFunctions as $function) {
             register_shutdown_function($function);
         }
-        register_shutdown_function("Log::shutdown");
+        register_shutdown_function("\Memcrab\Log\Log::shutdown");
         
-        pcntl_signal(SIGTERM, function($signo) {
-            Log::shutdown($signo);
-        });
+        if(function_exists('pcntl_signal')) {
+            pcntl_signal(SIGTERM, "\Memcrab\Log\Log::shutdown");
+            pcntl_signal(SIGUSR1, "\Memcrab\Log\Log::shutdown");
+        } else {
+            error_log("pcntl_signal not available please install pcntl php Module");
+        }
     }
 
-    public static function shutdown($signo = null):void {
-        $error = "Server stopped: " . ($signo ?? json_encode(error_get_last()));
-        error_log($error);
-        exit($error);
-    }
-
-    public function error($message) {
-        self::error($message, self::$context);
-    }
-
-    public function warning($message) {
-        self::warning($message, self::$context);
-    }
-
-    public static function setContext(array $context):void {
-        self::$context = $context;
+    public static function setServiceContext(
+            string $project,
+            string $service,
+            string $environment,
+            bool $DEBUG_MODE,
+            string $hostname,
+            string $ip,
+            string $os
+    ):void {
+        self::$context = [
+            'project' => $project,
+            'service' => $service,
+            'environment' => $environment,
+            'DEBUG_MODE' => $DEBUG_MODE,
+            'hostname' => $hostname,
+            'ip' => $ip,
+            'os' => $os
+        ];
     }
 }
