@@ -1,65 +1,63 @@
 <?php declare (strict_types = 1);
 namespace Memcrab\Log;
 
-use Aws\Sqs\SqsClient;
-use Monolog\Formatter\JsonFormatter;
-use Monolog\Handler\AmqpHandler;
-use Monolog\Handler\RotatingFileHandler;
-use Monolog\Handler\SqsHandler;
 use Monolog\Logger;
-use PhpAmqpLib\Channel\AMQPChannel;
 
-/**
- *  Log for core project
- *
- *  @author Oleksandr Diudiun
- */
-class Log {
+class Log extends Logger{
 
-    private static $instance;
-    private static $context = [];
+    private static array $context = [];
+    private static Log $instance;
 
-    function __construct() {}
-
-    public static function stream($name) {
-        if (!isset(self::$instance[$name])) {
-            self::$instance[$name] = new Logger($name);
+    public static function obj(): self
+    {
+        if (!isset(self::$instance ) || !(self::$instance instanceof Log)){
+            self::$instance = new self('log');  
         }
-
-        return self::$instance[$name];
-    }
-
-    public static function error($name, $message) {
-        if(empty(self::$instance[$name])){
-            die($message);
-        }
-        self::$instance[$name]->error($message, self::$context);
+        return self::$instance;
     }
     
-    public static function info($name, $message) {
-        if(empty(self::$instance[$name])){
-            die($message);
+    public static function shutdown($signo = null):void {
+        $error = "Server shuted down. " . $signo . " <" . json_encode(error_get_last()) . ">";
+        self::$instance->error($error);
+    }
+   
+    public static function contextProcessor($record)
+    {
+        $record['extra'] = self::$context;
+        return $record;
+    }
+
+    public static function registerShutdownFunction(array $additionalShutdownFunctions = []):void {
+        foreach($additionalShutdownFunctions as $function) {
+            register_shutdown_function($function);
         }
-        self::$instance[$name]->info($message, self::$context);
+        register_shutdown_function("\Memcrab\Log\Log::shutdown");
+        
+        if(function_exists('pcntl_signal')) {
+            pcntl_signal(SIGTERM, "\Memcrab\Log\Log::shutdown");
+            pcntl_signal(SIGUSR1, "\Memcrab\Log\Log::shutdown");
+        } else {
+            error_log("pcntl_signal not available please install pcntl php Module");
+        }
     }
 
-    public static function setContext(array $context) {
-        self::$context = $context;
-    }
-
-    public static function setDefaultRotationHandler($name) {
-        self::stream($name)->pushHandler(new RotatingFileHandler('logs/' . $name . '/' . $name . '.log'));
-    }
-
-    public static function setSqsHandler(SqsClient $sqsClient, $queueUrl, $name) {
-        $stream = new SqsHandler($sqsClient, $queueUrl);
-        $stream->setFormatter(new JsonFormatter());
-        self::stream($name)->pushHandler($stream);
-    }
-
-    public static function setAmqpHandler(AMQPChannel $channel, $exchangeName, $name) {
-        $stream = new AmqpHandler($channel, $exchangeName);
-        $stream->setFormatter(new JsonFormatter());
-        self::stream($name)->pushHandler($stream);
+    public static function setServiceContext(
+            string $project,
+            string $service,
+            string $environment,
+            bool $DEBUG_MODE,
+            string $hostname,
+            string $ip,
+            string $os
+    ):void {
+        self::$context = [
+            'project' => $project,
+            'service' => $service,
+            'environment' => $environment,
+            'DEBUG_MODE' => $DEBUG_MODE,
+            'hostname' => $hostname,
+            'ip' => $ip,
+            'os' => $os
+        ];
     }
 }
