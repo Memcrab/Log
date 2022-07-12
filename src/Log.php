@@ -1,5 +1,5 @@
 <?php
-//TODO: push
+
 declare(strict_types=1);
 
 namespace Memcrab\Log;
@@ -19,7 +19,7 @@ class Log extends Logger
 
     public static function obj(): self
     {
-        if (!isset(self::$instance) || !(self::$instance instanceof Log)) {
+        if (!isset(self::$instance) || !(self::$instance instanceof Logger)) {
             self::$instance = new self('log');
 
             \register_shutdown_function("\Memcrab\Log\Log::shutdown");
