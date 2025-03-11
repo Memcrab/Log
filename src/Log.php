@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Memcrab\Log;
 
+use LineProtocolFormatter;
 use Monolog\Logger;
 use Monolog\Handler\SqsHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Formatter\JsonFormatter;
+use TelegrafHandler;
 
 class Log extends Logger
 {
@@ -80,6 +82,11 @@ class Log extends Logger
                 $Handler = new SqsHandler($value->client(), $value->getQueueUrl('logs'));
                 $Handler->setFormatter(new JsonFormatter());
                 $Handler->pushProcessor('\Memcrab\Log\Log::contextProcessor');
+                break;
+            case 'TelegrafHandler':
+                $Handler = new TelegrafHandler($value, '', Log::DEBUG);
+                $Handler->pushProcessor('\Memcrab\Log\Log::contextProcessor');
+                $Handler->setFormatter(new LineProtocolFormatter());
                 break;
             default:
                 throw new \Exception($type . ' Handler scenario undefined. Please provide your own logic.', 500);
