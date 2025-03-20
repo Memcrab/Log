@@ -12,8 +12,10 @@ class LineProtocolFormatter implements FormatterInterface
     protected string $tagsBeforeType;
     protected string $tagsAfterType;
 
-    public function __construct(array $context)
+    public function __construct()
     {
+        $context = Log::getServiceContext();
+        
         if (isset($context['environment'])) {
             $context['environment'] = $this->normalizeTagValue($context['environment']);
             $context['environment'] = $this->escapeKey($context['environment']);

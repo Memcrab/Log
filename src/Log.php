@@ -66,6 +66,11 @@ class Log extends Logger
         ];
     }
 
+    public static function getServiceContext()
+    {
+        return self::$context;
+    }
+
     private function registerHandler($type, $value): void
     {
         switch ($type) {
@@ -85,7 +90,7 @@ class Log extends Logger
                 break;
             case 'TelegrafHandler':
                 $Handler = new TelegrafHandler($value, Log::DEBUG);
-                $Handler->setFormatter(new LineProtocolFormatter(self::$context));
+                $Handler->setFormatter(new LineProtocolFormatter());
                 $Handler->pushProcessor(new CoroutineContextProcessor());
                 break;
             default:
