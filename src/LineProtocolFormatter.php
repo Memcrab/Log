@@ -100,10 +100,10 @@ class LineProtocolFormatter implements FormatterInterface
         $microseconds = substr($microseconds, -6);
         $timestampInMs = $seconds . $microseconds; //timestamp in microseconds
 
-        //line protocol for influxDB (attention: space before field set and after)
-        // measurementName,tagKey=tagValue fieldKey="fieldValue" 1465839830100400200
-        // --------------- --------------- --------------------- -------------------
-        //   Measurement       Tag set           Field set            Timestamp
+        #line protocol for influxDB (attention: space before field set and after)
+        # measurementName,tagKey=tagValue fieldKey="fieldValue" 1465839830100400200
+        # --------------- --------------- --------------------- -------------------
+        #   Measurement       Tag set           Field set            Timestamp
         return "{$measurement},{$tags} {$fields} {$timestampInMs}";
     }
 

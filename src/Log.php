@@ -85,11 +85,7 @@ class Log extends Logger
                 break;
             case 'TelegrafHandler':
                 $Handler = new TelegrafHandler($value, Log::DEBUG);
-                $formatterClass = match (self::$context['project'] ?? null) {
-                    'MEG' => LineProtocolMEGFormatter::class,
-                    default => LineProtocolFormatter::class,
-                };
-                $Handler->setFormatter(new $formatterClass(self::$context));
+                $Handler->setFormatter(new LineProtocolFormatter(self::$context));
                 $Handler->pushProcessor(new CoroutineContextProcessor());
                 break;
             default:

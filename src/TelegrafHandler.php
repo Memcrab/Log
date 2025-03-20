@@ -26,10 +26,10 @@ class TelegrafHandler extends AbstractProcessingHandler
 
     protected function write(LogRecord $record): void
     {
-        // Different logging approaches to efficiently handle Swoole’s coroutine context:
-        // - Coroutine context: Use a non-blocking Swoole client for better performance (no waiting for response)
-        // - Non-coroutine context (before Swoole server start or after it stops): Use a blocking request to ensure log delivery (print errors to stdout if sending fails)
-        // - Non-coroutine context with coroutine hook enabled (e.g., logging inside `on('start')` callback): Logging must be wrapped in a coroutine in the main project code.
+        # Different logging approaches to efficiently handle Swoole’s coroutine context:
+        # - Coroutine context: Use a non-blocking Swoole client for better performance (no waiting for response)
+        # - Non-coroutine context (before Swoole server start or after it stops): Use a blocking request to ensure log delivery (print errors to stdout if sending fails)
+        # - Non-coroutine context with coroutine hook enabled (e.g., logging inside `on('start')` callback): Logging must be wrapped in a coroutine in the main project code.
         $isRunningInCoroutine = $record->context['isRunningInCoroutine'] ?? false;
         if ($isRunningInCoroutine) {
             $this->sendInCoroutine($record->formatted);
