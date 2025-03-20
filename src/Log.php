@@ -51,12 +51,14 @@ class Log extends Logger
         string $project,
         string $service,
         string $environment,
+        string $version,
         bool $DEBUG_MODE
     ): void {
         self::$context = [
             'project' => $project,
             'service' => $service,
             'environment' => $environment,
+            'version' => $version,
             'DEBUG_MODE' => $DEBUG_MODE,
             'hostname' => gethostname(),
             'ip' =>  gethostbyname(gethostname()),
@@ -80,6 +82,15 @@ class Log extends Logger
                 $Handler = new SqsHandler($value->client(), $value->getQueueUrl('logs'));
                 $Handler->setFormatter(new JsonFormatter());
                 $Handler->pushProcessor('\Memcrab\Log\Log::contextProcessor');
+                break;
+            case 'TelegrafHandler':
+                $Handler = new TelegrafHandler($value, Log::DEBUG);
+                $formatterClass = match (self::$context['project'] ?? null) {
+                    'MEG' => LineProtocolMEGFormatter::class,
+                    default => LineProtocolFormatter::class,
+                };
+                $Handler->setFormatter(new $formatterClass(self::$context));
+                $Handler->pushProcessor(new CoroutineContextProcessor());
                 break;
             default:
                 throw new \Exception($type . ' Handler scenario undefined. Please provide your own logic.', 500);
