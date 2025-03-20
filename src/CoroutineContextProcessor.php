@@ -15,7 +15,8 @@ class CoroutineContextProcessor implements ProcessorInterface
         # Coroutine::getCid() > 0 - The code is running inside a coroutine,
         # Coroutine::getCid() == -1 - The code is running in the main thread (outside of a coroutine)
         $isRunningInCoroutine = Coroutine::getCid() > 0;
+        $isCoroutineHookEnable = (bool) Coroutine::getOptions();
 
-        return $record->with(context: [...$record->context, 'isRunningInCoroutine' => $isRunningInCoroutine]);
+        return $record->with(context: [...$record->context, 'isRunningInCoroutine' => $isRunningInCoroutine, 'isCoroutineHookEnable' => $isCoroutineHookEnable]);
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Memcrab\Log;
 
 use Monolog\Handler\AbstractProcessingHandler;
+use OpenSwoole\Coroutine;
 use OpenSwoole\Coroutine\Http\Client;
 use Monolog\Logger;
 use Monolog\LogRecord;
@@ -29,12 +30,20 @@ class TelegrafHandler extends AbstractProcessingHandler
         # Different logging approaches to efficiently handle Swoole’s coroutine context:
         # - Coroutine context: Use a non-blocking Swoole client for better performance (no waiting for response)
         # - Non-coroutine context (before Swoole server start or after it stops): Use a blocking request to ensure log delivery (print errors to stdout if sending fails)
-        # - Non-coroutine context with coroutine hook enabled (e.g., logging inside `on('start')` callback): Logging must be wrapped in a coroutine in the main project code.
+        # - Non-coroutine context with coroutine hook enabled (e.g., logging inside `on('start')` callback): Logging must be wrapped in a coroutine.
         $isRunningInCoroutine = $record->context['isRunningInCoroutine'] ?? false;
+        $isCoroutineHookEnable = $record->context['isCoroutineHookEnable'] ?? false;
+
         if ($isRunningInCoroutine) {
             $this->sendInCoroutine($record->formatted);
         } else {
-            $this->sendOutsideCoroutine($record->formatted);
+            if($isCoroutineHookEnable) {
+                Coroutine::create(function () use ($record) {
+                    $this->sendInCoroutine($record->formatted);
+                });
+            } else {
+                $this->sendOutsideCoroutine($record->formatted);
+            }
         }
     }
 
