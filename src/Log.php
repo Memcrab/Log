@@ -52,14 +52,21 @@ class Log extends Logger
         string $service,
         string $environment,
         string $version,
-        bool $DEBUG_MODE
+        bool $DEBUG_MODE,
+        string $timeZone = 'UTC'
     ): void {
+        if ($timeZone !== 'UTC' && !self::isValidTimeZone($timeZone)) {
+            trigger_error(sprintf('Invalid timezone: %s', $timeZone), E_USER_WARNING);
+            $timeZone = 'UTC';
+        }
+
         self::$context = [
             'project' => $project,
             'service' => $service,
             'environment' => $environment,
             'version' => $version,
             'DEBUG_MODE' => $DEBUG_MODE,
+            'timeZone' => $timeZone,
             'hostname' => gethostname(),
             'ip' =>  gethostbyname(gethostname()),
             'os' => php_uname('s') . " " . php_uname('r')
@@ -105,5 +112,10 @@ class Log extends Logger
         foreach (($DEBUG_MODE) ? $debugHandlers : $releaseHandler as $key => $value) {
             $this->registerHandler($key, $value);
         }
+    }
+
+    private static function isValidTimeZone(string $timezone): bool 
+    {
+        return in_array($timezone, \DateTimeZone::listIdentifiers(), true);
     }
 }

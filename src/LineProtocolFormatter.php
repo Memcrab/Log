@@ -94,7 +94,8 @@ class LineProtocolFormatter implements FormatterInterface
             . ',value=1'
         ;
 
-        $now = \DateTime::createFromFormat('U.u', number_format(microtime(true), 6, '.', ''))->setTimezone(new \DateTimeZone('America/New_York'));
+        $timeZone = new \DateTimeZone(Log::getServiceContext()['timeZone'] ?? 'UTC');
+        $now = \DateTime::createFromFormat('U.u', number_format(microtime(true), 6, '.', ''))->setTimezone($timeZone);
         $datetime = $now->format('Y-m-d\TH:i:s.uP');
         
         $seconds = strtotime($datetime); //part of the timestamp  in seconds
