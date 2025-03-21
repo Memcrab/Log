@@ -51,17 +51,31 @@ class Log extends Logger
         string $project,
         string $service,
         string $environment,
-        bool $DEBUG_MODE
+        string $version,
+        bool $DEBUG_MODE,
+        string $timeZone = 'UTC'
     ): void {
+        if ($timeZone !== 'UTC' && !self::isValidTimeZone($timeZone)) {
+            trigger_error(sprintf('Invalid timezone: %s', $timeZone), E_USER_WARNING);
+            $timeZone = 'UTC';
+        }
+
         self::$context = [
             'project' => $project,
             'service' => $service,
             'environment' => $environment,
+            'version' => $version,
             'DEBUG_MODE' => $DEBUG_MODE,
+            'timeZone' => $timeZone,
             'hostname' => gethostname(),
             'ip' =>  gethostbyname(gethostname()),
             'os' => php_uname('s') . " " . php_uname('r')
         ];
+    }
+
+    public static function getServiceContext()
+    {
+        return self::$context;
     }
 
     private function registerHandler($type, $value): void
@@ -81,6 +95,11 @@ class Log extends Logger
                 $Handler->setFormatter(new JsonFormatter());
                 $Handler->pushProcessor('\Memcrab\Log\Log::contextProcessor');
                 break;
+            case 'TelegrafHandler':
+                $Handler = new TelegrafHandler($value, Log::DEBUG);
+                $Handler->setFormatter(new LineProtocolFormatter());
+                $Handler->pushProcessor(new CoroutineContextProcessor());
+                break;
             default:
                 throw new \Exception($type . ' Handler scenario undefined. Please provide your own logic.', 500);
                 break;
@@ -93,5 +112,10 @@ class Log extends Logger
         foreach (($DEBUG_MODE) ? $debugHandlers : $releaseHandler as $key => $value) {
             $this->registerHandler($key, $value);
         }
+    }
+
+    private static function isValidTimeZone(string $timezone): bool 
+    {
+        return in_array($timezone, \DateTimeZone::listIdentifiers(), true);
     }
 }
