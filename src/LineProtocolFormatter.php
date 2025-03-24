@@ -11,6 +11,7 @@ class LineProtocolFormatter implements FormatterInterface
 {
     protected string $tagsBeforeType;
     protected string $tagsAfterType;
+    protected string $tagService = '';
 
     public function __construct()
     {
@@ -29,6 +30,7 @@ class LineProtocolFormatter implements FormatterInterface
         if (isset($context['service'])) {
             $context['service'] = $this->normalizeTagValue($context['service']);
             $context['service'] = $this->escapeKey($context['service']);
+            $this->tagService = $context['service'];
         }
         
         if (isset($context['version'])) {
@@ -81,6 +83,12 @@ class LineProtocolFormatter implements FormatterInterface
         return strtr($key, $escapeKeys);
     }
 
+    private function escapeValue($value)
+    {
+        $escapeValues = ['"' => '\\"', "\\" => '\\\\'];
+        return strtr($value, $escapeValues);
+    }
+
     public function format(LogRecord $record): string
     {
         $measurement = 'log';
@@ -89,25 +97,23 @@ class LineProtocolFormatter implements FormatterInterface
         # Reference: https://docs.influxdata.com/influxdb/v2/write-data/best-practices/optimize-writes/#sort-tags-by-key
         $tags = "{$this->tagsBeforeType},type={$record->level->getName()}{$this->tagsAfterType}";
 
-        $fields = 
-            'logmessage=' . json_encode($record->message, JSON_UNESCAPED_UNICODE) 
-            . ',value=1'
-        ;
-
         $timeZone = new \DateTimeZone(Log::getServiceContext()['timeZone'] ?? 'UTC');
         $now = \DateTime::createFromFormat('U.u', number_format(microtime(true), 6, '.', ''))->setTimezone($timeZone);
         $datetime = $now->format('Y-m-d\TH:i:s.uP');
+
+        $logmessage = $record->message . " [$this->tagService:$datetime]";
+        $fields = 'logmessage="' . $this->escapeValue($logmessage) . '",value=1';
         
         $seconds = strtotime($datetime); //part of the timestamp  in seconds
         $microseconds = substr($datetime, 0, strlen($datetime) - 6); //part of the timestamp  in microseconds
         $microseconds = substr($microseconds, -6);
-        $timestampInMs = $seconds . $microseconds; //timestamp in microseconds
+        $timestampInNs = $seconds . $microseconds . '000';
 
         #line protocol for influxDB (attention: space before field set and after)
         # measurementName,tagKey=tagValue fieldKey="fieldValue" 1465839830100400200
         # --------------- --------------- --------------------- -------------------
         #   Measurement       Tag set           Field set            Timestamp
-        return "{$measurement},{$tags} {$fields} {$timestampInMs}";
+        return "{$measurement},{$tags} {$fields} {$timestampInNs}";
     }
 
     public function formatBatch(array $records): string
