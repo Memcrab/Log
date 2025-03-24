@@ -11,6 +11,7 @@ class LineProtocolFormatter implements FormatterInterface
 {
     protected string $tagsBeforeType;
     protected string $tagsAfterType;
+    protected string $tagService = '';
 
     public function __construct()
     {
@@ -29,6 +30,7 @@ class LineProtocolFormatter implements FormatterInterface
         if (isset($context['service'])) {
             $context['service'] = $this->normalizeTagValue($context['service']);
             $context['service'] = $this->escapeKey($context['service']);
+            $this->tagService = $context['service'];
         }
         
         if (isset($context['version'])) {
@@ -89,14 +91,14 @@ class LineProtocolFormatter implements FormatterInterface
         # Reference: https://docs.influxdata.com/influxdb/v2/write-data/best-practices/optimize-writes/#sort-tags-by-key
         $tags = "{$this->tagsBeforeType},type={$record->level->getName()}{$this->tagsAfterType}";
 
-        $fields = 
-            'logmessage=' . json_encode($record->message, JSON_UNESCAPED_UNICODE) 
-            . ',value=1'
-        ;
-
         $timeZone = new \DateTimeZone(Log::getServiceContext()['timeZone'] ?? 'UTC');
         $now = \DateTime::createFromFormat('U.u', number_format(microtime(true), 6, '.', ''))->setTimezone($timeZone);
         $datetime = $now->format('Y-m-d\TH:i:s.uP');
+
+        $logmessage = $record->message . " [$this->tagService:$datetime]";
+        
+        $fields = 'logmessage=' . json_encode($logmessage, JSON_UNESCAPED_UNICODE) 
+            . ',value=1';
         
         $seconds = strtotime($datetime); //part of the timestamp  in seconds
         $microseconds = substr($datetime, 0, strlen($datetime) - 6); //part of the timestamp  in microseconds
