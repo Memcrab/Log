@@ -101,13 +101,13 @@ class LineProtocolFormatter implements FormatterInterface
         $seconds = strtotime($datetime); //part of the timestamp  in seconds
         $microseconds = substr($datetime, 0, strlen($datetime) - 6); //part of the timestamp  in microseconds
         $microseconds = substr($microseconds, -6);
-        $timestampInMs = $seconds . $microseconds; //timestamp in microseconds
+        $timestampInNs = $seconds . $microseconds . '000';
 
         #line protocol for influxDB (attention: space before field set and after)
         # measurementName,tagKey=tagValue fieldKey="fieldValue" 1465839830100400200
         # --------------- --------------- --------------------- -------------------
         #   Measurement       Tag set           Field set            Timestamp
-        return "{$measurement},{$tags} {$fields} {$timestampInMs}";
+        return "{$measurement},{$tags} {$fields} {$timestampInNs}";
     }
 
     public function formatBatch(array $records): string
