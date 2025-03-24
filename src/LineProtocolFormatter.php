@@ -83,6 +83,12 @@ class LineProtocolFormatter implements FormatterInterface
         return strtr($key, $escapeKeys);
     }
 
+    private function escapeValue($value)
+    {
+        $escapeValues = ['"' => '\\"', "\\" => '\\\\'];
+        return strtr($value, $escapeValues);
+    }
+
     public function format(LogRecord $record): string
     {
         $measurement = 'log';
@@ -96,9 +102,7 @@ class LineProtocolFormatter implements FormatterInterface
         $datetime = $now->format('Y-m-d\TH:i:s.uP');
 
         $logmessage = $record->message . " [$this->tagService:$datetime]";
-        
-        $fields = 'logmessage=' . json_encode($logmessage, JSON_UNESCAPED_UNICODE) 
-            . ',value=1';
+        $fields = 'logmessage="' . $this->escapeValue($logmessage) . '",value=1';
         
         $seconds = strtotime($datetime); //part of the timestamp  in seconds
         $microseconds = substr($datetime, 0, strlen($datetime) - 6); //part of the timestamp  in microseconds
