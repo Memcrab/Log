@@ -69,8 +69,6 @@ class Log extends Logger
             'DEBUG_MODE' => $DEBUG_MODE,
             'timeZone' => $timeZone,
             'hostname' => $hostname ?? gethostname(),
-            'ip' =>  gethostbyname(gethostname()),
-            'os' => php_uname('s') . " " . php_uname('r')
         ];
     }
 
