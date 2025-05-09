@@ -10,8 +10,8 @@ use Monolog\LogRecord;
 class LineProtocolFormatter implements FormatterInterface
 {
     protected string $tagsBeforeSource;
-    protected string $tagsAfterType;
     protected string $tagSource = '';
+    protected string $fieldVersion;
 
     public function __construct()
     {
@@ -34,16 +34,12 @@ class LineProtocolFormatter implements FormatterInterface
         }
         
         if (isset($context['version'])) {
-            $context['version'] = $this->normalizeTagValue($context['version']);
-            $context['version'] = $this->escapeKey($context['version']);
+            $this->fieldVersion = $this->escapeValue($context['version']);
         }
 
         $this->tagsBeforeSource =
             'env=' . ($context['environment'] ?? 'empty')
             . ',host=' . ($context['hostname'] ?? 'empty');
-
-        $this->tagsAfterType = 
-            ',version=' . ($context['version'] ?? 'empty');
     }
 
     private function normalizeTagValue($value): string
@@ -102,14 +98,14 @@ class LineProtocolFormatter implements FormatterInterface
 
         # For optimal performance, tags should be sorted lexicographically by key.
         # Reference: https://docs.influxdata.com/influxdb/v2/write-data/best-practices/optimize-writes/#sort-tags-by-key
-        $tags = "{$this->tagsBeforeSource},source={$tagSource},type={$record->level->getName()}{$this->tagsAfterType}";
+        $tags = "{$this->tagsBeforeSource},source={$tagSource},type={$record->level->getName()}";
 
         $timeZone = new \DateTimeZone(Log::getServiceContext()['timeZone'] ?? 'UTC');
         $now = \DateTime::createFromFormat('U.u', number_format(microtime(true), 6, '.', ''))->setTimezone($timeZone);
         $datetime = $now->format('Y-m-d\TH:i:s.uP');
 
         $logmessage = $record->message . " [$tagSource:$datetime]";
-        $fields = 'logmessage="' . $this->escapeValue($logmessage) . '",value=1';
+        $fields = 'logmessage="' . $this->escapeValue($logmessage) . '",value=1,version="' . $this->fieldVersion. '"';
         
         $seconds = strtotime($datetime); //part of the timestamp  in seconds
         $microseconds = substr($datetime, 0, strlen($datetime) - 6); //part of the timestamp  in microseconds
