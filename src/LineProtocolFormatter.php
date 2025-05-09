@@ -9,9 +9,9 @@ use Monolog\LogRecord;
 
 class LineProtocolFormatter implements FormatterInterface
 {
-    protected string $tagsBeforeType;
-    protected string $tagsAfterType;
-    protected string $tagService = '';
+    protected string $tagsBeforeSource;
+    protected string $tagSource = '';
+    protected string $fieldVersion;
 
     public function __construct()
     {
@@ -30,21 +30,16 @@ class LineProtocolFormatter implements FormatterInterface
         if (isset($context['service'])) {
             $context['service'] = $this->normalizeTagValue($context['service']);
             $context['service'] = $this->escapeKey($context['service']);
-            $this->tagService = $context['service'];
+            $this->tagSource = $context['service'];
         }
         
         if (isset($context['version'])) {
-            $context['version'] = $this->normalizeTagValue($context['version']);
-            $context['version'] = $this->escapeKey($context['version']);
+            $this->fieldVersion = $this->escapeValue($context['version']);
         }
 
-        $this->tagsBeforeType =
+        $this->tagsBeforeSource =
             'env=' . ($context['environment'] ?? 'empty')
-            . ',host=' . ($context['hostname'] ?? 'empty')
-            . ',source=' . ($context['service'] ?? 'empty');
-
-        $this->tagsAfterType = 
-            ',version=' . ($context['version'] ?? 'empty');
+            . ',host=' . ($context['hostname'] ?? 'empty');
     }
 
     private function normalizeTagValue($value): string
@@ -93,16 +88,24 @@ class LineProtocolFormatter implements FormatterInterface
     {
         $measurement = 'log';
 
+        if(isset($record['context']['service'])) {
+            $recordContextService = $this->normalizeTagValue($record['context']['service']);
+            $recordContextService = $this->escapeKey($record['context']['service']);
+            $tagSource = $recordContextService ?? 'empty';
+        } else {
+            $tagSource = $this->tagSource;
+        }
+
         # For optimal performance, tags should be sorted lexicographically by key.
         # Reference: https://docs.influxdata.com/influxdb/v2/write-data/best-practices/optimize-writes/#sort-tags-by-key
-        $tags = "{$this->tagsBeforeType},type={$record->level->getName()}{$this->tagsAfterType}";
+        $tags = "{$this->tagsBeforeSource},source={$tagSource},type={$record->level->getName()}";
 
         $timeZone = new \DateTimeZone(Log::getServiceContext()['timeZone'] ?? 'UTC');
         $now = \DateTime::createFromFormat('U.u', number_format(microtime(true), 6, '.', ''))->setTimezone($timeZone);
         $datetime = $now->format('Y-m-d\TH:i:s.uP');
 
-        $logmessage = $record->message . " [$this->tagService:$datetime]";
-        $fields = 'logmessage="' . $this->escapeValue($logmessage) . '",value=1';
+        $logmessage = $record->message . " [$tagSource:$datetime]";
+        $fields = 'logmessage="' . $this->escapeValue($logmessage) . '",value=1,version="' . $this->fieldVersion. '"';
         
         $seconds = strtotime($datetime); //part of the timestamp  in seconds
         $microseconds = substr($datetime, 0, strlen($datetime) - 6); //part of the timestamp  in microseconds
