@@ -53,6 +53,7 @@ class Log extends Logger
         string $environment,
         string $version,
         bool $DEBUG_MODE,
+        string $hostname,
         string $timeZone = 'UTC'
     ): void {
         if ($timeZone !== 'UTC' && !self::isValidTimeZone($timeZone)) {
@@ -67,9 +68,7 @@ class Log extends Logger
             'version' => $version,
             'DEBUG_MODE' => $DEBUG_MODE,
             'timeZone' => $timeZone,
-            'hostname' => gethostname(),
-            'ip' =>  gethostbyname(gethostname()),
-            'os' => php_uname('s') . " " . php_uname('r')
+            'hostname' => $hostname,
         ];
     }
 
